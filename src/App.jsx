@@ -36,7 +36,7 @@ const categories = [
   "Πολιτιστικοί / Αθλητικοί χώροι",
   "Ψηφιακές υπηρεσίες δήμου",
   "Ιδέα βελτίωσης / Νέα πρόταση",
-  "Άλλο"
+  "Άλλο",
 ];
 
 const statuses = ["Νέα", "Υπό εξέταση", "Σε εξέλιξη", "Ολοκληρώθηκε", "Απορρίφθηκε"];
@@ -55,6 +55,11 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [gpsLoading, setGpsLoading] = useState(false);
 
+  const [session, setSession] = useState(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
   const [suggestions, setSuggestions] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -70,7 +75,7 @@ export default function App() {
     category: categories[0],
     description: "",
     photo: null,
-    photoPreview: ""
+    photoPreview: "",
   });
 
   async function loadSuggestions() {
@@ -93,6 +98,20 @@ export default function App() {
     loadSuggestions();
   }, []);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session || null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const filteredSuggestions = useMemo(() => {
     return suggestions.filter((item) => {
       const okCategory = categoryFilter === "Όλες" || item.category === categoryFilter;
@@ -112,7 +131,7 @@ export default function App() {
       total: suggestions.length,
       newCount: suggestions.filter((x) => x.status === "Νέα").length,
       progressCount: suggestions.filter((x) => x.status === "Σε εξέλιξη").length,
-      doneCount: suggestions.filter((x) => x.status === "Ολοκληρώθηκε").length
+      doneCount: suggestions.filter((x) => x.status === "Ολοκληρώθηκε").length,
     };
   }, [suggestions]);
 
@@ -134,7 +153,7 @@ export default function App() {
           ...prev,
           latitude: lat,
           longitude: lng,
-          location: prev.location || `GPS: ${lat}, ${lng}`
+          location: prev.location || `GPS: ${lat}, ${lng}`,
         }));
 
         setMessage("Η τοποθεσία διαβάστηκε επιτυχώς.");
@@ -161,7 +180,7 @@ export default function App() {
       setForm((prev) => ({
         ...prev,
         photo: file,
-        photoPreview: reader.result
+        photoPreview: reader.result,
       }));
     };
     reader.readAsDataURL(file);
@@ -198,7 +217,7 @@ export default function App() {
         photo_url: photoUrl,
         status: "Νέα",
         latitude: form.latitude || null,
-        longitude: form.longitude || null
+        longitude: form.longitude || null,
       };
 
       const { error } = await supabase.from("suggestions").insert([payload]);
@@ -213,7 +232,7 @@ export default function App() {
         category: categories[0],
         description: "",
         photo: null,
-        photoPreview: ""
+        photoPreview: "",
       });
 
       setMessage("Η εισήγηση καταχωρίστηκε επιτυχώς.");
@@ -232,6 +251,28 @@ export default function App() {
     }
   }
 
+  async function handleAdminLogin(e) {
+    e.preventDefault();
+    setAuthMessage("Γίνεται σύνδεση...");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
+
+    if (error) {
+      setAuthMessage("Σφάλμα σύνδεσης: " + error.message);
+    } else {
+      setAuthMessage("");
+      setView("dashboard");
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setView("citizen");
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "#f3f5f7", padding: "14px", color: "#1f2937" }}>
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
@@ -241,7 +282,7 @@ export default function App() {
             borderRadius: "24px",
             padding: "22px",
             marginBottom: "16px",
-            boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+            boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
           }}
         >
           <h1 style={{ margin: "0 0 8px 0", fontSize: "42px" }}>Snap2Shape</h1>
@@ -258,25 +299,41 @@ export default function App() {
                 border: "none",
                 cursor: "pointer",
                 background: view === "citizen" ? "#2563eb" : "#e5e7eb",
-                color: view === "citizen" ? "#fff" : "#111827"
+                color: view === "citizen" ? "#fff" : "#111827",
               }}
             >
               Φόρμα Πολίτη
             </button>
 
             <button
-              onClick={() => setView("dashboard")}
+              onClick={() => setView(session ? "dashboard" : "login")}
               style={{
                 padding: "12px 16px",
                 borderRadius: "12px",
                 border: "none",
                 cursor: "pointer",
-                background: view === "dashboard" ? "#2563eb" : "#e5e7eb",
-                color: view === "dashboard" ? "#fff" : "#111827"
+                background: view === "dashboard" || view === "login" ? "#2563eb" : "#e5e7eb",
+                color: view === "dashboard" || view === "login" ? "#fff" : "#111827",
               }}
             >
               Dashboard Δήμου
             </button>
+
+            {session && (
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "none",
+                  cursor: "pointer",
+                  background: "#111827",
+                  color: "#fff",
+                }}
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
 
@@ -285,7 +342,7 @@ export default function App() {
             style={{
               display: "grid",
               gridTemplateColumns: "minmax(0,1.1fr) minmax(320px,0.9fr)",
-              gap: "16px"
+              gap: "16px",
             }}
           >
             <div
@@ -293,7 +350,7 @@ export default function App() {
                 background: "#fff",
                 borderRadius: "24px",
                 padding: "20px",
-                boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
               }}
             >
               <h2>Νέα εισήγηση</h2>
@@ -364,12 +421,7 @@ export default function App() {
 
                 <div style={{ marginTop: "14px" }}>
                   <label style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}>Φωτογραφία</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    style={inputStyle}
-                  />
+                  <input type="file" accept="image/*" onChange={handlePhotoChange} style={inputStyle} />
                   <div style={{ color: "#6b7280", fontSize: "13px", marginTop: "6px" }}>
                     Σε κινητό μπορεί να ανοίξει άλμπουμ ή κάμερα, ανάλογα με τη συσκευή.
                   </div>
@@ -383,7 +435,7 @@ export default function App() {
                         maxHeight: "280px",
                         objectFit: "cover",
                         borderRadius: "16px",
-                        marginTop: "10px"
+                        marginTop: "10px",
                       }}
                     />
                   )}
@@ -421,7 +473,7 @@ export default function App() {
                   background: "#fff",
                   borderRadius: "24px",
                   padding: "20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
                 }}
               >
                 <h2>Στατιστικά</h2>
@@ -438,7 +490,7 @@ export default function App() {
                   background: "#fff",
                   borderRadius: "24px",
                   padding: "20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
                 }}
               >
                 <h2>Τι περιλαμβάνει</h2>
@@ -452,12 +504,83 @@ export default function App() {
               </div>
             </div>
           </div>
+        ) : view === "login" ? (
+          <div
+            style={{
+              maxWidth: "520px",
+              margin: "0 auto",
+              background: "#fff",
+              borderRadius: "24px",
+              padding: "24px",
+              boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
+            }}
+          >
+            <h2>Σύνδεση Δήμου</h2>
+            <p style={{ color: "#6b7280" }}>
+              Η διαχείριση εισηγήσεων είναι διαθέσιμη μόνο σε εξουσιοδοτημένους χρήστες.
+            </p>
+
+            <form onSubmit={handleAdminLogin}>
+              <div style={{ marginTop: "14px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}>Email</label>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  style={inputStyle}
+                  required
+                />
+              </div>
+
+              <div style={{ marginTop: "14px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "bold" }}>Password</label>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  style={inputStyle}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "18px", flexWrap: "wrap" }}>
+                <button type="submit" style={primaryButtonStyle}>
+                  Login
+                </button>
+
+                {authMessage && (
+                  <span
+                    style={{
+                      color: authMessage.startsWith("Σφάλμα") ? "#b91c1c" : "#15803d",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {authMessage}
+                  </span>
+                )}
+              </div>
+            </form>
+          </div>
+        ) : !session ? (
+          <div
+            style={{
+              maxWidth: "700px",
+              margin: "0 auto",
+              background: "#fff",
+              borderRadius: "24px",
+              padding: "24px",
+              boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
+            }}
+          >
+            <h2>Απαιτείται σύνδεση</h2>
+            <p>Για πρόσβαση στο Dashboard Δήμου πρέπει πρώτα να συνδεθείτε.</p>
+          </div>
         ) : (
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "minmax(0,1fr) minmax(360px,0.9fr)",
-              gap: "16px"
+              gap: "16px",
             }}
           >
             <div style={{ display: "grid", gap: "16px" }}>
@@ -473,7 +596,7 @@ export default function App() {
                   background: "#fff",
                   borderRadius: "24px",
                   padding: "20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
                 }}
               >
                 <h2>Χάρτης εισηγήσεων</h2>
@@ -486,7 +609,7 @@ export default function App() {
                     style={{ height: "100%", width: "100%" }}
                   >
                     <TileLayer
-                      attribution='&copy; OpenStreetMap contributors'
+                      attribution="&copy; OpenStreetMap contributors"
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
 
@@ -505,13 +628,9 @@ export default function App() {
                         >
                           <Popup>
                             <div style={{ minWidth: "180px" }}>
-                              <div style={{ fontWeight: "bold", marginBottom: "6px" }}>
-                                {item.category}
-                              </div>
+                              <div style={{ fontWeight: "bold", marginBottom: "6px" }}>{item.category}</div>
                               <div>{item.location}</div>
-                              <div style={{ marginTop: "6px", color: "#6b7280" }}>
-                                Status: {item.status}
-                              </div>
+                              <div style={{ marginTop: "6px", color: "#6b7280" }}>Status: {item.status}</div>
                               <button
                                 onClick={() => setSelectedId(item.id)}
                                 style={{
@@ -521,7 +640,7 @@ export default function App() {
                                   borderRadius: "8px",
                                   background: "#2563eb",
                                   color: "#fff",
-                                  cursor: "pointer"
+                                  cursor: "pointer",
                                 }}
                               >
                                 Προβολή λεπτομερειών
@@ -539,7 +658,7 @@ export default function App() {
                   background: "#fff",
                   borderRadius: "24px",
                   padding: "20px",
-                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                  boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
                 }}
               >
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 220px 180px auto", gap: "10px", marginBottom: "14px" }}>
@@ -587,7 +706,7 @@ export default function App() {
                           cursor: "pointer",
                           display: "flex",
                           justifyContent: "space-between",
-                          gap: "12px"
+                          gap: "12px",
                         }}
                       >
                         <div>
@@ -602,7 +721,7 @@ export default function App() {
                             padding: "6px 10px",
                             borderRadius: "999px",
                             whiteSpace: "nowrap",
-                            height: "fit-content"
+                            height: "fit-content",
                           }}
                         >
                           {item.status}
@@ -619,7 +738,7 @@ export default function App() {
                 background: "#fff",
                 borderRadius: "24px",
                 padding: "20px",
-                boxShadow: "0 4px 18px rgba(0,0,0,0.05)"
+                boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
               }}
             >
               <h2>Λεπτομέρειες</h2>
@@ -677,7 +796,7 @@ export default function App() {
                             border: selectedSuggestion.status === status ? "none" : "1px solid #dbe1e8",
                             background: selectedSuggestion.status === status ? "#2563eb" : "#fff",
                             color: selectedSuggestion.status === status ? "#fff" : "#111827",
-                            cursor: "pointer"
+                            cursor: "pointer",
                           }}
                         >
                           {status}
@@ -704,7 +823,7 @@ function StatBox({ title, value }) {
         background: "#f8fafc",
         border: "1px solid #edf2f7",
         borderRadius: "16px",
-        padding: "14px"
+        padding: "14px",
       }}
     >
       <div style={{ color: "#6b7280", marginBottom: "6px" }}>{title}</div>
@@ -728,7 +847,7 @@ const inputStyle = {
   border: "1px solid #dbe1e8",
   borderRadius: "14px",
   background: "#fff",
-  boxSizing: "border-box"
+  boxSizing: "border-box",
 };
 
 const primaryButtonStyle = {
@@ -737,7 +856,7 @@ const primaryButtonStyle = {
   color: "#fff",
   border: "none",
   borderRadius: "12px",
-  cursor: "pointer"
+  cursor: "pointer",
 };
 
 const secondaryButtonStyle = {
@@ -746,21 +865,21 @@ const secondaryButtonStyle = {
   color: "#111827",
   border: "1px solid #dbe1e8",
   borderRadius: "12px",
-  cursor: "pointer"
+  cursor: "pointer",
 };
 
 const emptyBoxStyle = {
   padding: "18px",
   borderRadius: "16px",
   border: "1px dashed #dbe1e8",
-  color: "#6b7280"
+  color: "#6b7280",
 };
 
 const detailBoxStyle = {
   background: "#f8fafc",
   border: "1px solid #edf2f7",
   borderRadius: "16px",
-  padding: "14px"
+  padding: "14px",
 };
 
 const detailTitleStyle = {
@@ -768,5 +887,5 @@ const detailTitleStyle = {
   textTransform: "uppercase",
   color: "#6b7280",
   marginBottom: "8px",
-  fontWeight: "bold"
+  fontWeight: "bold",
 };
