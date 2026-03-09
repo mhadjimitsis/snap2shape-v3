@@ -277,18 +277,55 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#f3f5f7", padding: "14px", color: "#1f2937" }}>
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
         <div
-          style={{
-            background: "#fff",
-            borderRadius: "24px",
-            padding: "22px",
-            marginBottom: "16px",
-            boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h1 style={{ margin: "0 0 8px 0", fontSize: "42px" }}>Snap2Shape</h1>
-          <p style={{ margin: 0, color: "#6b7280" }}>
-            Πλατφόρμα εισηγήσεων πολιτών με GPS, φωτογραφίες και dashboard διαχείρισης.
-          </p>
+  style={{
+    background: "#fff",
+    borderRadius: "24px",
+    padding: "22px",
+    marginBottom: "16px",
+    boxShadow: "0 4px 18px rgba(0,0,0,0.05)",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "18px",
+      flexWrap: "wrap",
+    }}
+  >
+    <img
+      src="/snap2shape-logo.jpg"
+      alt="Snap2Shape Logo"
+      style={{
+        width: "110px",
+        height: "110px",
+        objectFit: "cover",
+        borderRadius: "18px",
+      }}
+    />
+
+    <div style={{ flex: 1, minWidth: "260px" }}>
+      <h1 style={{ margin: "0 0 8px 0", fontSize: "42px" }}>Snap2Shape</h1>
+      <p style={{ margin: "0 0 8px 0", color: "#6b7280" }}>
+        Πλατφόρμα εισηγήσεων πολιτών με GPS, φωτογραφίες και dashboard διαχείρισης.
+      </p>
+
+      <div
+        style={{
+          display: "inline-block",
+          marginTop: "6px",
+          padding: "8px 12px",
+          background: "#eff6ff",
+          color: "#1d4ed8",
+          borderRadius: "999px",
+          fontSize: "14px",
+          fontWeight: "bold",
+        }}
+      >
+        Συμμετοχή του Λυκείου Α’ Εθνάρχη Μακαρίου Γ’ Πάφου στον διαγωνισμό Junior Achievement
+      </div>
+    </div>
+  </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "16px" }}>
             <button
